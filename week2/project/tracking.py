@@ -6,10 +6,11 @@ from sklearn.cluster import KMeans
 
 dir = os.path.dirname(os.path.realpath(__file__))
 
-cap = cv2.VideoCapture(dir + '/Robots.mp4')
+cap = cv2.VideoCapture(dir + '/Challenge.mp4')
 ret, frame1 = cap.read()
 
-crop_img = frame1[500:850, 1500:1750]
+# crop_img = frame1[500:850, 1500:1750]
+crop_img = frame1[530:850,975:1150]
 # Initiate ORB detector
 orb = cv2.ORB_create()
 # find the keypoints with ORB
@@ -84,10 +85,10 @@ while cap.isOpened():
     MIN_GOOD_MATCH = 5
     if crop1_good_matches > crop2_good_matches and crop1_good_matches > MIN_GOOD_MATCH:
         des1 = descp1
-        cv2.circle(frame2, (int(kmeans.cluster_centers_[0][0]),int(kmeans.cluster_centers_[0][1])), 5, (147,20,255), -1)
+        cv2.circle(frame2, (int(kmeans.cluster_centers_[0][0]),int(kmeans.cluster_centers_[0][1])), 50, (147,20,255), -1)
     elif crop2_good_matches > MIN_GOOD_MATCH: 
         des1 = descp2
-        cv2.circle(frame2, (int(kmeans.cluster_centers_[1][0]),int(kmeans.cluster_centers_[1][1])), 5, (147,20,255), -1)
+        cv2.circle(frame2, (int(kmeans.cluster_centers_[1][0]),int(kmeans.cluster_centers_[1][1])), 50, (147,20,255), -1)
 
     cv2.imshow('crop1', frame2)
     if cv2.waitKey(1) & 0xFF == ord('q'):
