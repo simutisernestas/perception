@@ -1,0 +1,7 @@
+Iterative Closest Point (ICP)
+    1. For each object point p in model 1, find the nearest point q in model 2
+    2. Use all pairs (p,q)to estimate the transformation from model 1 to model 2 (Kabsch Algorithm, same as used in global)
+    3. Apply the transformation to the points of Model 1
+    4. Repeat steps 1-3 until convergence/stop criterion is met
+
+Reconstruction from rgbd, like in Ex2.ipynb
