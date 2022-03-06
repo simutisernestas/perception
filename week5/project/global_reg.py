@@ -6,7 +6,8 @@ from scipy.spatial import procrustes
 import warnings
 warnings.filterwarnings("error")
 
-def draw_registrations(source, target, transformation = None, recolor = False):
+
+def draw_registrations(source, target, transformation=None, recolor=False):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
     if(recolor):
@@ -15,6 +16,7 @@ def draw_registrations(source, target, transformation = None, recolor = False):
     if(transformation is not None):
         source_temp.transform(transformation)
     o3d.visualization.draw_geometries([source_temp, target_temp])
+
 
 use_car = True
 use_scipy_rot = False
@@ -33,15 +35,15 @@ else:
 voxel_size = 0.04
 source = source.voxel_down_sample(voxel_size)
 source.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 2.0,
-                                            max_nn=30))
+                                                             max_nn=30))
 source_fpfh_features = o3d.pipelines.registration.compute_fpfh_feature(source,
-    o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 5.0,max_nn=100))
+                                                                       o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 5.0, max_nn=100))
 
 target = target.voxel_down_sample(voxel_size)
 target.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 2.0,
-                                            max_nn=30))
+                                                             max_nn=30))
 target_fpfh_features = o3d.pipelines.registration.compute_fpfh_feature(target,
-    o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 5.0, max_nn=100))
+                                                                       o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 5.0, max_nn=100))
 
 target_fpfh_features.data.shape, source_fpfh_features.data.shape, target.dimension, source.dimension
 
@@ -69,15 +71,17 @@ source_points -= source_centroid
 match_targets = target_points[list(matches.keys())]
 match_sources = source_points[list(matches.values())]
 
-optimal_R = np.zeros((3,3))
+print("RANSAC")
+optimal_R = np.zeros((3, 3))
 min_norm = np.inf
 for i in range(1000):
-    target_random_sample = np.random.choice(list(matches.keys()), (3,), replace=False)
+    target_random_sample = np.random.choice(
+        list(matches.keys()), (3,), replace=False)
     source_random_sample = [matches[target_random_sample[x]] for x in range(3)]
 
     if use_scipy_rot:
         try:
-            (estimated_rotation,rmsd) = scipy.spatial.transform.Rotation.align_vectors(
+            (estimated_rotation, rmsd) = scipy.spatial.transform.Rotation.align_vectors(
                 target_points[target_random_sample], source_points[source_random_sample])
         except:
             continue
@@ -93,9 +97,11 @@ for i in range(1000):
         estimated_rotation = r.T
 
     if use_scipy_rot:
-        norm = np.linalg.norm(estimated_rotation.apply(match_sources) - match_targets)
+        norm = np.linalg.norm(estimated_rotation.apply(
+            match_sources) - match_targets)
     else:
-        norm = np.linalg.norm((estimated_rotation @ match_sources.T).T - match_targets)
+        norm = np.linalg.norm(
+            (estimated_rotation @ match_sources.T).T - match_targets)
 
     if min_norm > norm:
         min_norm = norm
@@ -105,6 +111,42 @@ if use_scipy_rot:
     source_transformed = optimal_R.apply(source_points)
 else:
     source_transformed = (optimal_R @ source_points.T).T
+
+print("ICP")
+for k in range(3):
+    n = 50
+    pairs = {}
+    print("RCP")
+    for ti, tp in enumerate(target_points):
+        mind = np.inf
+        si = -1
+        ri = np.random.randint(0, len(source_transformed)-1, n)
+        for i in ri:
+            sp = source_transformed[i]
+            d = np.sqrt((tp[0]-sp[0])**2 + (tp[1]-sp[1])**2 + (tp[2]-sp[2])**2)
+            if d < mind:
+                mind = d
+                si = i
+        pairs[ti] = si
+
+    norm = np.linalg.norm(
+        target_points[list(pairs.keys())] - source_transformed[list(pairs.values())])
+    print(f"Before: {norm}")
+
+    Cov = target_points[list(pairs.keys())
+                        ].T @ source_transformed[list(pairs.values())]
+    U, S, Vt = np.linalg.svd(Cov)
+    v = Vt.T
+    d = np.linalg.det(v @ U.T)
+    e = np.array([[1, 0, 0], [0, 1, 0], [0, 0, d]])
+    r = v @ e @ U.T
+    estimated_rotation = r.T
+    source_transformed = (estimated_rotation @ source_transformed.T).T
+
+    norm = np.linalg.norm(
+        target_points[list(pairs.keys())] - source_transformed[list(pairs.values())])
+    print(f"After: {norm}")
+
 pcd1 = o3d.geometry.PointCloud()
 pcd1.points = o3d.utility.Vector3dVector(source_transformed)
 pcd2 = o3d.geometry.PointCloud()
