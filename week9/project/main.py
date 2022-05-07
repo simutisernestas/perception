@@ -115,7 +115,8 @@ def playImageSequence(left_img, right_img, K):
         """
         Implement step 2.4)
         """
-        # TODO:
+        # TODO: triangulate all new feature matches between I_{k} & I_{k-1}
+        # reference_2D_new, landmark_3D_new
         
         #Project the points from camera to world coordinates
         reference_2D = reference_2D_new.astype('float32')
